@@ -14,3 +14,8 @@ dist/
 !fixtures/broken/*.warc.gz
 !fixtures/broken/*.cdx
 !fixtures/expected/*
+node_modules/
+*.pyc
+.coverage
+.benchmarks/
+.env
