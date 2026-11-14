@@ -1,0 +1,24 @@
+{
+  "body_file": "body.bin",
+  "fetched_at": "2024-03-01T10:05:00Z",
+  "headers": [
+    [
+      "Content-Type",
+      "image/png"
+    ],
+    [
+      "Content-Length",
+      "67"
+    ],
+    [
+      "X-Archive-Fixture",
+      "webvault"
+    ]
+  ],
+  "method": "GET",
+  "mime_type": "image/png",
+  "note": "synthetic PNG bytes",
+  "redirect_url": null,
+  "status": 200,
+  "url": "https://site-a.test/logo.png"
+}

@@ -1,0 +1,4 @@
+Content-Type: image/png
+Content-Length: 67
+X-Archive-Fixture: webvault
+

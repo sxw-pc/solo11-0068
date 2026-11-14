@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+{% if mode == "audit" %}
+  {% if not audits %}
+    <p class="empty">No audit batches have been recorded in this index.</p>
+  {% endif %}
+  {% for item in audits %}
+    {% set summary = item.summary %}
+    <section class="card">
+      <div class="cardhead">
+        <h2><code>{{ summary["batch_id"] }}</code></h2>
+        <span class="pill {{ summary['conclusion'] }}">{{ summary["conclusion"] }}</span>
+      </div>
+      <div class="metrics">
+        <div><strong>{{ summary["archives"] }}</strong><span>archives</span></div>
+        <div><strong>{{ summary["records"] }}</strong><span>records</span></div>
+        <div><strong>{{ summary["issues"] }}</strong><span>issues</span></div>
+        <div><strong>{{ summary["fail_count"] }}</strong><span>fatal</span></div>
+        <div><strong>{{ summary["warn_count"] }}</strong><span>warnings</span></div>
+      </div>
+      {% if item.report.get("by_code") %}
+        <table>
+          <thead><tr><th>Code</th><th class="num">Count</th></tr></thead>
+          <tbody>
+          {% for code, count in item.report["by_code"].items() %}
+            <tr><td><code>{{ code }}</code></td><td class="num">{{ count }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="empty">No issues detected.</p>
+      {% endif %}
+      {% if item.report.get("issues") %}
+        <details>
+          <summary>Issue detail ({{ item.report["issues"]|length }})</summary>
+          <table>
+            <thead><tr><th>Code</th><th>File</th><th class="num">Offset</th><th>Detail</th></tr></thead>
+            <tbody>
+            {% for issue in item.report["issues"] %}
+              <tr>
+                <td><code>{{ issue["code"] }}</code></td>
+                <td>{{ issue["warc_file"] }}</td>
+                <td class="num">{{ issue["offset"] }}</td>
+                <td>{{ issue["detail"] }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </details>
+      {% endif %}
+    </section>
+  {% endfor %}
+{% else %}
+  {% if not archives %}
+    <p class="empty">No archives indexed. Run <code>webvault build</code> first.</p>
+  {% else %}
+    <table>
+      <thead>
+        <tr><th>File</th><th>SHA-256</th><th class="num">Size</th><th class="num">Records</th><th class="num">Responses</th><th>First capture</th><th>Last capture</th></tr>
+      </thead>
+      <tbody>
+      {% for archive in archives %}
+        <tr>
+          <td><strong>{{ archive["file"] }}</strong></td>
+          <td><code class="digest" title="{{ archive['sha256'] }}">{{ archive["sha256"][:16] }}…</code></td>
+          <td class="num">{{ archive["size"] }}</td>
+          <td class="num">{{ archive["record_count"] }}</td>
+          <td class="num">{{ archive["response_count"] }}</td>
+          <td>{{ archive["first_timestamp"] or "—" }}</td>
+          <td>{{ archive["last_timestamp"] or "—" }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endif %}
+{% endblock %}

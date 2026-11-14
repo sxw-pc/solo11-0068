@@ -1,0 +1,9 @@
+http://(test,site-b)/assets/style.css 20240301100300 http://site-b.test/assets/style.css text/css 200 sha256:S7HXP24ZTCO4CLTQ4XVV4PCRMB4E6RSDRYXF5UR4MIUAADPALHXA - 380 missing.warc
+http://(test,site-b)/redirect 20240301100000 http://site-b.test/redirect text/html 301 sha256:WEJMZFUSUP33BLPLJZDG77LUR3LSMFPCHLFE3XBWJZCI7CSJD57A https://site-c.test/landing 843 missing.warc
+https://(test,site-a)/about.html 20240301090200 https://site-a.test/about.html text/html 200 sha256:IIBJUF4XK7TNFP5LTVAYYVHACGTC57V6H7OB63U4YZ3CRHALWQQQ - 1867 missing.warc
+https://(test,site-a)/data.json 20240301090400 https://site-a.test/data.json application/json 200 sha256:MFYHMYBNDUNAXIL2B476SDIZHMBAMGJEHSOHZN2IJS2DSNB7NDUQ - 2415 missing.warc
+https://(test,site-a)/index.html?b=2&a=1 20240301090000 https://site-a.test/index.html?b=2&a=1 text/html 200 sha256:BZ6A74TEEGWZDDYNWICM4O7RUIICJ66KXTOKOC7ZD2QTY55RZSOQ - 2889 missing.warc
+https://(test,site-a)/logo.png 20240301100500 https://site-a.test/logo.png image/png 200 sha256:UV4HHBDON5UNPMIQFNO2C4HHRERXH2SPAJ5VJTAOMUL364QT6ZGA - 3504 missing.warc
+https://(test,site-c)/landing 20240301100002 https://site-c.test/landing text/html 200 sha256:WZRUTFBXLUPHGL7DU5NHGPQXTMSRVRTVCJEJBN5JPOLW7RPZZVEQ - 3972 missing.warc
+https://(test,site-c)/not-found 20240301100400 https://site-c.test/not-found text/html 404 sha256:UWBP6SBVG5DSGLAMTJCGSLQXP6IPQRNH4JO4FVTOQE4JLMY4Q3SQ - 4500 missing.warc
+https://site-c.test/orphan 20240301120000 https://site-c.test/orphan text/html 200 sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA - 999 missing.warc

@@ -1,0 +1,10 @@
+{
+  "archive_sha256": "a0ebc675e83ed03f0dda9956a138c52e5569f196814ce735eb897865fe4117d2",
+  "by_code": {},
+  "conclusion": "pass",
+  "fail_count": 0,
+  "format": "webvault-audit/1",
+  "records": 10,
+  "responses": 8,
+  "warn_count": 0
+}

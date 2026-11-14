@@ -1,0 +1,57 @@
+{
+  "archive": {
+    "file": "archive.warc.gz",
+    "first_timestamp": "2024-03-01T09:00:00Z",
+    "last_timestamp": "2024-03-01T10:05:00Z",
+    "records": 10,
+    "responses": 8,
+    "sha256": "a0ebc675e83ed03f0dda9956a138c52e5569f196814ce735eb897865fe4117d2",
+    "size": 3742
+  },
+  "first_records": [
+    {
+      "digest": "sha256:S7HXP24ZTCO4CLTQ4XVV4PCRMB4E6RSDRYXF5UR4MIUAADPALHXA",
+      "file": "archive.warc.gz",
+      "mimetype": "text/css",
+      "offset": 299,
+      "redirect": "",
+      "status": 200,
+      "timestamp": "20240301100300",
+      "url": "http://site-b.test/assets/style.css",
+      "urlkey": "http://(test,site-b)/assets/style.css"
+    },
+    {
+      "digest": "sha256:WEJMZFUSUP33BLPLJZDG77LUR3LSMFPCHLFE3XBWJZCI7CSJD57A",
+      "file": "archive.warc.gz",
+      "mimetype": "text/html",
+      "offset": 655,
+      "redirect": "https://site-c.test/landing",
+      "status": 301,
+      "timestamp": "20240301100000",
+      "url": "http://site-b.test/redirect",
+      "urlkey": "http://(test,site-b)/redirect"
+    },
+    {
+      "digest": "sha256:IIBJUF4XK7TNFP5LTVAYYVHACGTC57V6H7OB63U4YZ3CRHALWQQQ",
+      "file": "archive.warc.gz",
+      "mimetype": "text/html",
+      "offset": 1407,
+      "redirect": "",
+      "status": 200,
+      "timestamp": "20240301090200",
+      "url": "https://site-a.test/about.html",
+      "urlkey": "https://(test,site-a)/about.html"
+    }
+  ],
+  "format": "webvault-manifest/1",
+  "totals": {
+    "mimetypes": {
+      "application/json": 1,
+      "image/png": 1,
+      "text/css": 1,
+      "text/html": 5
+    },
+    "records": 8,
+    "responses": 8
+  }
+}

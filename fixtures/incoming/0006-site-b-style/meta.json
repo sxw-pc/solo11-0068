@@ -1,0 +1,24 @@
+{
+  "body_file": "body.bin",
+  "fetched_at": "2024-03-01T10:03:00Z",
+  "headers": [
+    [
+      "Content-Type",
+      "text/css"
+    ],
+    [
+      "Content-Length",
+      "57"
+    ],
+    [
+      "X-Archive-Fixture",
+      "webvault"
+    ]
+  ],
+  "method": "GET",
+  "mime_type": "text/css",
+  "note": "CSS fixture",
+  "redirect_url": null,
+  "status": 200,
+  "url": "http://site-b.test/assets/style.css"
+}

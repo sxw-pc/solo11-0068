@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }} · webvault</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="mark">WV</span> webvault</div>
+    <nav>
+      <a href="{{ url_for('archives') }}">Archives</a>
+      <a href="{{ url_for('records') }}">Records</a>
+      <a href="{{ url_for('audit_page') }}">Audit</a>
+    </nav>
+  </header>
+  <main>
+    <div class="pagehead">
+      <h1>{{ page_title }}</h1>
+      <p class="muted">Read-only local view of <code>{{ archive_db }}</code></p>
+    </div>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>Offline archive review · no network requests · no write endpoints</footer>
+</body>
+</html>

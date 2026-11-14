@@ -1,0 +1,24 @@
+{
+  "body_file": "body.bin",
+  "fetched_at": "2024-03-01T09:04:00Z",
+  "headers": [
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Content-Length",
+      "58"
+    ],
+    [
+      "X-Archive-Fixture",
+      "webvault"
+    ]
+  ],
+  "method": "GET",
+  "mime_type": "application/json",
+  "note": "JSON fixture",
+  "redirect_url": null,
+  "status": 200,
+  "url": "https://site-a.test/data.json"
+}
