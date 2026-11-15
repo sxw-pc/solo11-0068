@@ -61,12 +61,22 @@ python -m pytest -q     # 全绿；不联网、只写 tmp
 | `index` | 为已有归档重建 CDX 与 SQLite | `--archives DIR_OR_FILE [--out DIR]` |
 | `audit` | 审计归档与 CDX，输出 JSON + Markdown | `--archives DIR_OR_FILE [--out DIR] [--db DB]` |
 | `replay` | 单条按偏移或批量按查询离线回放 | `--archive FILE --offset N` 或 `--db DB [过滤条件]`，均需 `--out DIR` |
+| `salvage` | 只读抢救损坏 WARC 中仍可独立核验的记录 | `--archive FILE --out DIR`（绝不覆盖原 WARC/CDX） |
 | `manifest` | 生成 manifest；可选跨归档去重合并 | `--archives DIR [--out FILE] [--merge-to FILE]` |
 | `diff` | 比较两个 manifest | `before.json after.json [--fail-on removed]` |
 | `serve` | 只读本地浏览服务 | `--db DB [--host LOOPBACK] [--port 5077]` |
 | `demo` | 从仓库 fixture 跑完整链路 | `--out DIR [--plain]` |
 
 退出码：`0` 成功（含审计 warn）、`2` 输入/校验错误、`3` 审计 fail 或 `diff --fail-on removed` 命中、`4` 内部错误。所有命令输出统一使用 `webvault:` 前缀。
+
+### salvage 抢救语义
+
+`salvage` 采用方案 B（member 重新定位 + 隔离校验），在 gzip member 或 WARC 记录损坏后仍可恢复其后完整采集，而不是在首个损坏点截断：
+
+- 对 gzip 多 member 归档，逐个依据各自 gzip 头独立定位并用同一 CRC/size 规则校验；某 member 失败后通过扫描下一个 gzip magic 重新同步，绝不“跳过一次异常后盲目继续”。plain WARC 则按 `WARC/1.0` 帧标记重新同步。
+- 记录仅在通过与 `audit/checks.py` 相同的规则时入库：record ID 非空且唯一、`Content-Length` 与 block 长度一致、block digest 正确、需要 target URI 的类型其 URI 可规范化。重复 ID、digest 错误、不完整记录一律排除，并在 `recovery-report.json` 写明来源物理 offset 与原因。
+- 输出写入 `<stem>.salvaged.warc[.gz]`、同名 `.cdx` 与 `index.sqlite3`，文件名与源归档不同，源 WARC/CDX 字节保持不变，重复运行输出确定。
+- 每条保留记录在报告中对齐“源 offset → 输出 record ID → 新 offset”，并实际以新 offset 回放，校验响应字节与源 block 完全一致；未读取尾部以 `unread_tail` 标注。派生归档随后必须通过现有 `audit`（结论 `pass`）。无任何记录通过核验时只写报告、退出码 `2`，不产生空归档。
 
 ## 目录
 

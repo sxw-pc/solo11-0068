@@ -18,6 +18,7 @@ from .commands import (
     cmd_index,
     cmd_manifest,
     cmd_replay,
+    cmd_salvage,
 )
 from .demo import run_demo
 
@@ -75,6 +76,14 @@ def _parser() -> VaultParser:
     replay.add_argument("--status", type=int, default=None)
     replay.add_argument("--limit", type=int, default=1000)
     replay.set_defaults(func=cmd_replay)
+
+    salvage = sub.add_parser(
+        "salvage",
+        help="recover verifiable records from a damaged WARC without altering it",
+    )
+    salvage.add_argument("--archive", required=True)
+    salvage.add_argument("--out", required=True)
+    salvage.set_defaults(func=cmd_salvage)
 
     manifest = sub.add_parser("manifest", help="build a manifest; optionally merge a set")
     manifest.add_argument("--archives", required=True)

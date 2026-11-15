@@ -73,8 +73,9 @@ def serialize_raw(record: RawRecord) -> bytes:
 def _gzip_member(payload: bytes) -> bytes:
     compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
     compressed = compressor.compress(payload) + compressor.flush()
+    # RFC 1952: both CRC32 and ISIZE are little-endian.
     trailer = (
-        zlib.crc32(payload).to_bytes(4, "big")
+        zlib.crc32(payload).to_bytes(4, "little")
         + (len(payload) & 0xFFFFFFFF).to_bytes(4, "little")
     )
     return _GZIP_HEADER + compressed + trailer

@@ -7,6 +7,7 @@ from webvault.index.cdx import cdx_path_for
 from webvault.index.sqlite_index import build_archive_data, create_database, write_archive_index
 from webvault.model import CaptureRecord
 from webvault.warc import write_archive
+from webvault.warc.writer import _gzip_member
 
 
 def make_capture(url="https://site-a.test/index.html", timestamp="2024-03-01T09:00:00Z", **kwargs):
@@ -92,3 +93,46 @@ def built(tmp_path, captures):
     write_archive_index(data)
     db_path = create_database(tmp_path / "index.sqlite3", [data])
     return {"archive": archive, "cdx": cdx_path_for(archive), "db": db_path, "data": data}
+
+
+def split_gzip_members(data: bytes) -> list[tuple[int, int]]:
+    """Return ``[(start, end), ...]`` physical spans of every gzip member."""
+    spans = []
+    start = 0
+    while True:
+        nxt = data.find(b"\x1f\x8b\x08", start + 1)
+        if nxt < 0:
+            spans.append((start, len(data)))
+            return spans
+        spans.append((start, nxt))
+        start = nxt
+
+
+def re_member(payload: bytes) -> bytes:
+    """Build a fresh, CRC-valid gzip member around an existing WARC payload."""
+    return _gzip_member(payload)
+
+
+@pytest.fixture
+def broken_gzip_factory(tmp_path, captures):
+    """Build multi-member gzip archives with controlled physical damage.
+
+    Records: one warcinfo followed by three response members, so the middle
+    response can be destroyed while later members remain intact.
+    """
+    base = tmp_path / "base.warc.gz"
+    write_archive(captures, base, gzip_compress=True)
+    original = bytearray(base.read_bytes())
+    spans = split_gzip_members(bytes(original))
+
+    def build(name: str, *, mutate=None, truncate: int = 0) -> Path:
+        data = bytearray(original)
+        if mutate is not None:
+            data = bytearray(mutate(bytes(data), spans))
+        if truncate:
+            data = data[:-truncate]
+        path = tmp_path / name
+        path.write_bytes(bytes(data))
+        return path
+
+    return build, spans, base

@@ -25,6 +25,7 @@ from .manifest import (
     write_manifest,
 )
 from .replay import replay_one, replay_query
+from .salvage import REPORT_NAME, salvage_archive
 from .warc import write_archive
 
 
@@ -186,6 +187,32 @@ def cmd_replay(args) -> int:
         return 2
     item = replay_one(args.archive, args.offset, out_dir, filename=args.filename)
     log(f"wrote {item.output} ({item.bytes_written} bytes) from offset {args.offset}")
+    return 0
+
+
+def cmd_salvage(args) -> int:
+    source = Path(args.archive)
+    out_dir = Path(args.out)
+    result = salvage_archive(source, out_dir)
+    if result.archive is None:
+        fail(
+            "no record passed verification; "
+            f"see {result.report_path or out_dir / REPORT_NAME}"
+        )
+        return 2
+    log(
+        f"salvaged {result.recovered_records} records "
+        f"({result.recovered_responses} responses) from {source.name}"
+    )
+    log(f"derived archive: {result.archive} (audit {result.audit_conclusion})")
+    log(f"indexes: {result.cdx.name}, {result.database.name}")
+    log(f"excluded {len(result.excluded)} records; report: {result.report_path}")
+    if result.unread_tail is not None:
+        tail = result.unread_tail
+        log(
+            f"unread tail: {tail.end - tail.start} bytes "
+            f"({tail.start}-{tail.end}) not recovered"
+        )
     return 0
 
 
