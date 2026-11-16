@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..model import CaptureRecord
+from ..digest import iter_file_chunks
+from ..model import CaptureRecord, HeaderList
 from ..urlnorm import UrlError, canonicalize_url, normalize_timestamp
 from ..warc.headers import HeaderError, parse_headers, validate_headers
 
@@ -34,6 +36,23 @@ class IngestValidationError(ValueError):
         super().__init__(detail)
         self.code = code
         self.detail = detail
+
+
+@dataclass(frozen=True)
+class CaptureMeta:
+    """Fully validated capture metadata without any response body bytes."""
+
+    url: str
+    timestamp: str
+    status: int
+    method: str
+    headers: HeaderList
+    mime_type: str
+    source: str
+    redirect_url: str | None
+    note: str | None
+    body_file: str
+    body_path: Path
 
 
 def _required(meta: dict[str, Any], key: str) -> Any:
@@ -86,7 +105,7 @@ def _headers_from_meta(meta: dict[str, Any], record_dir: Path) -> tuple[tuple[st
     return tuple(headers)
 
 
-def _read_body(meta: dict[str, Any], record_dir: Path) -> tuple[bytes, str]:
+def _resolve_body_path(meta: dict[str, Any], record_dir: Path) -> tuple[Path, str]:
     body_name = _required(meta, "body_file")
     if not isinstance(body_name, str) or not body_name:
         raise IngestValidationError("E_BAD_META", "body_file must be a non-empty string")
@@ -102,14 +121,37 @@ def _read_body(meta: dict[str, Any], record_dir: Path) -> tuple[bytes, str]:
         raise IngestValidationError("E_BODY_NOT_FOUND", str(exc)) from exc
     if not body_path.is_file():
         raise IngestValidationError("E_BODY_NOT_FOUND", f"body file not found: {body_name}")
+    return body_path, body_name
+
+
+def _read_body(meta: dict[str, Any], record_dir: Path) -> tuple[bytes, str]:
+    """Legacy whole-file read; new batch code must use the streaming path."""
+    body_path, body_name = _resolve_body_path(meta, record_dir)
     try:
         return body_path.read_bytes(), body_name
     except OSError as exc:
         raise IngestValidationError("E_BODY_NOT_FOUND", str(exc)) from exc
 
 
-def parse_capture(record_dir: Path, source: str) -> CaptureRecord:
-    """Validate one capture directory and return a normalised capture record."""
+def open_body(meta: CaptureMeta):
+    """Open the validated body file for bounded chunked reads."""
+    try:
+        return meta.body_path.open("rb")
+    except OSError as exc:
+        raise IngestValidationError("E_BODY_NOT_FOUND", str(exc)) from exc
+
+
+def iter_body_chunks(meta: CaptureMeta, chunk_size: int):
+    """Yield body chunks without ever holding the whole body in memory."""
+    handle = open_body(meta)
+    try:
+        yield from iter_file_chunks(handle, chunk_size)
+    finally:
+        handle.close()
+
+
+def parse_capture_meta(record_dir: Path, source: str) -> CaptureMeta:
+    """Validate one capture directory without reading its response body bytes."""
     meta = _parse_meta(record_dir / "meta.json")
     url_raw = _required(meta, "url")
     if not isinstance(url_raw, str):
@@ -156,17 +198,43 @@ def parse_capture(record_dir: Path, source: str) -> CaptureRecord:
         raise IngestValidationError("E_BAD_META", "note must be a string or null")
 
     headers = _headers_from_meta(meta, record_dir)
-    body, body_file = _read_body(meta, record_dir)
-    return CaptureRecord(
+    body_path, body_file = _resolve_body_path(meta, record_dir)
+    return CaptureMeta(
         url=url,
         timestamp=timestamp,
         status=status,
         method=method,
         headers=headers,
         mime_type=mime_type,
-        body=body,
         source=source,
         redirect_url=redirect,
         note=note,
         body_file=body_file,
+        body_path=body_path,
+    )
+
+
+def parse_capture(record_dir: Path, source: str) -> CaptureRecord:
+    """Validate one capture directory and return a normalised capture record.
+
+    Retained for callers that materialise bodies; the bounded batch pipeline
+    uses :func:`parse_capture_meta` plus chunked body streaming instead.
+    """
+    info = parse_capture_meta(record_dir, source)
+    try:
+        body = info.body_path.read_bytes()
+    except OSError as exc:
+        raise IngestValidationError("E_BODY_NOT_FOUND", str(exc)) from exc
+    return CaptureRecord(
+        url=info.url,
+        timestamp=info.timestamp,
+        status=info.status,
+        method=info.method,
+        headers=info.headers,
+        mime_type=info.mime_type,
+        body=body,
+        source=info.source,
+        redirect_url=info.redirect_url,
+        note=info.note,
+        body_file=info.body_file,
     )

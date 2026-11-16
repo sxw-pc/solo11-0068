@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -16,7 +17,7 @@ from .index.sqlite_index import (
     record_audit,
     write_archive_index,
 )
-from .ingest import load_incoming
+from .ingest import build_ingest_plan, load_incoming, open_temp_plan_dir
 from .manifest import (
     build_manifest,
     diff_manifests,
@@ -25,7 +26,7 @@ from .manifest import (
     write_manifest,
 )
 from .replay import replay_one, replay_query
-from .warc import write_archive
+from .warc import write_archive_plan
 
 
 def log(message: str) -> None:
@@ -88,22 +89,39 @@ def cmd_import(args) -> int:
 
 def cmd_build(args) -> int:
     out_dir = Path(args.out)
-    result = _ingest(Path(args.incoming))
-    if not result.ok:
+    incoming = Path(args.incoming)
+    if not incoming.is_dir():
+        fail(f"incoming directory not found: {incoming}")
         return 2
-    if not result.records:
-        fail("no valid capture records found")
-        return 2
-    name = args.archive_name
-    if name is None:
-        name = "archive.warc.gz" if args.gzip else "archive.warc"
-    archive = out_dir / name
-    written = write_archive(
-        result.records,
-        archive,
-        gzip_compress=args.gzip,
-        max_record_bytes=args.max_record_bytes,
-    )
+
+    # Bounded-memory snapshot pipeline: bodies are spooled in fixed-size
+    # chunks, the ordered plan lives in SQLite and the WARC is streamed back
+    # out with per-record digest re-verification, so peak resident response
+    # memory stays independent of total batch size.
+    workdir = open_temp_plan_dir()
+    try:
+        plan = build_ingest_plan(incoming, workdir)
+        for error in plan.errors:
+            fail(f"{error.source}: {error.code}: {error.detail}")
+        if not plan.ok:
+            return 2
+        if plan.count() == 0:
+            fail("no valid capture records found")
+            return 2
+        name = args.archive_name
+        if name is None:
+            name = "archive.warc.gz" if args.gzip else "archive.warc"
+        archive = out_dir / name
+        written = write_archive_plan(
+            plan,
+            archive,
+            gzip_compress=args.gzip,
+            max_record_bytes=args.max_record_bytes,
+        )
+    finally:
+        # Best-effort cleanup never masks a real failure from the build.
+        shutil.rmtree(workdir, ignore_errors=True)
+
     data = build_archive_data(archive)
     write_archive_index(data)
     create_database(out_dir / "index.sqlite3", [data])

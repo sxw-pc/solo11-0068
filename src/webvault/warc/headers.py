@@ -82,14 +82,24 @@ def reason_phrase(status: int) -> str:
         return "Unknown"
 
 
-def build_http_block(status: int, headers: HeaderList, body: bytes) -> bytes:
-    """Build status line + original header order + blank + body bytes."""
+def http_block_head(status: int, headers: HeaderList, body_length: int) -> bytes:
+    """Build the deterministic status line + header block (terminator included).
+
+    Shared by the in-memory and streaming writers so both paths emit the exact
+    same bytes.  A missing ``Content-Length`` is appended with the real length,
+    matching :func:`build_http_block`.
+    """
     working = list(headers)
     if get_header(tuple(working), "Content-Length") is None:
-        working.append(("Content-Length", str(len(body))))
+        working.append(("Content-Length", str(body_length)))
     head = serialize_headers(tuple(working))
     status_line = f"HTTP/1.1 {status} {reason_phrase(status)}".encode("latin-1")
-    return status_line + b"\r\n" + head + b"\r\n\r\n" + body
+    return status_line + b"\r\n" + head + b"\r\n\r\n"
+
+
+def build_http_block(status: int, headers: HeaderList, body: bytes) -> bytes:
+    """Build status line + original header order + blank + body bytes."""
+    return http_block_head(status, headers, len(body)) + body
 
 
 def split_http_block(block: bytes) -> tuple[int, HeaderList, bytes]:

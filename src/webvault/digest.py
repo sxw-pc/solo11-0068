@@ -5,12 +5,31 @@ from __future__ import annotations
 import base64
 import hashlib
 from pathlib import Path
+from typing import IO, Iterator
 
 ALGORITHMS = ("sha256", "sha1")
+DEFAULT_CHUNK_SIZE = 1024 * 1024
 
 
 def _b32(raw: bytes) -> str:
     return base64.b32encode(raw).decode("ascii").rstrip("=")
+
+
+def iter_file_chunks(handle: IO[bytes], chunk_size: int = DEFAULT_CHUNK_SIZE) -> Iterator[bytes]:
+    """Yield fixed-size chunks from an open binary file (bounded memory)."""
+    while True:
+        chunk = handle.read(chunk_size)
+        if not chunk:
+            break
+        yield chunk
+
+
+def digest_from_hasher(hasher: "hashlib._Hash", algorithm: str = "sha256") -> str:
+    """Format a streaming hasher's state as ``algorithm:BASE32`` (unpadded)."""
+    algorithm = algorithm.lower()
+    if algorithm not in ALGORITHMS:
+        raise ValueError(f"unsupported digest algorithm: {algorithm}")
+    return f"{algorithm}:{_b32(hasher.digest())}"
 
 
 def digest_bytes(data: bytes, algorithm: str = "sha256") -> str:
