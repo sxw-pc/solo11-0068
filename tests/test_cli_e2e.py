@@ -60,6 +60,54 @@ def test_build_import_replay_manifest_and_audit_commands(tmp_path, capsys):
     assert "webvault:" in capsys.readouterr().out
 
 
+def test_replay_chain_cli_follows_archived_redirect(tmp_path, capsys):
+    out = tmp_path / "build"
+    root = Path(__file__).resolve().parents[1] / "fixtures" / "incoming"
+    assert main(["build", "--incoming", str(root), "--out", str(out), "--gzip"]) == 0
+    chain_out = tmp_path / "chain"
+    assert main(
+        [
+            "replay-chain",
+            "--db",
+            str(out / "index.sqlite3"),
+            "--url",
+            "http://site-b.test/redirect",
+            "--at",
+            "2024-03-01T10:00:02Z",
+            "--mode",
+            "as_of",
+            "--out",
+            str(chain_out),
+        ]
+    ) == 0
+    manifest = json.loads((chain_out / "chain-manifest.json").read_text(encoding="utf-8"))
+    assert manifest["status"] == "complete"
+    assert [hop["status"] for hop in manifest["hops"]] == [301, 200]
+    assert (chain_out / "chain" / "000001" / "response.http").is_file()
+    assert (chain_out / "chain" / "000002" / "response.http").is_file()
+
+    exact_out = tmp_path / "chain-exact"
+    assert main(
+        [
+            "replay-chain",
+            "--db",
+            str(out / "index.sqlite3"),
+            "--url",
+            "http://site-b.test/redirect",
+            "--at",
+            "2024-03-01T10:00:02Z",
+            "--mode",
+            "exact_capture",
+            "--out",
+            str(exact_out),
+        ]
+    ) == 3
+    exact = json.loads((exact_out / "chain-manifest.json").read_text(encoding="utf-8"))
+    assert exact["termination"]["code"] == "E_EXACT_CAPTURE_MISSING"
+    assert len(exact["hops"]) == 1
+    assert "incomplete" in capsys.readouterr().out
+
+
 def test_cli_exit_codes_for_bad_input_audit_fail_and_diff_regression(tmp_path, drop_factory):
     make, root = drop_factory
     make("bad", url="not-a-url")

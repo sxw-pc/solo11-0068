@@ -61,12 +61,25 @@ python -m pytest -q     # 全绿；不联网、只写 tmp
 | `index` | 为已有归档重建 CDX 与 SQLite | `--archives DIR_OR_FILE [--out DIR]` |
 | `audit` | 审计归档与 CDX，输出 JSON + Markdown | `--archives DIR_OR_FILE [--out DIR] [--db DB]` |
 | `replay` | 单条按偏移或批量按查询离线回放 | `--archive FILE --offset N` 或 `--db DB [过滤条件]`，均需 `--out DIR` |
+| `replay-chain` | 沿已归档 response 的 `Location` 逐跳回放重定向链 | `--db DB --url URL --at ISO8601 --mode exact_capture\|as_of --out DIR [--max-hops N] [--archives-root DIR]` |
 | `manifest` | 生成 manifest；可选跨归档去重合并 | `--archives DIR [--out FILE] [--merge-to FILE]` |
 | `diff` | 比较两个 manifest | `before.json after.json [--fail-on removed]` |
 | `serve` | 只读本地浏览服务 | `--db DB [--host LOOPBACK] [--port 5077]` |
 | `demo` | 从仓库 fixture 跑完整链路 | `--out DIR [--plain]` |
 
-退出码：`0` 成功（含审计 warn）、`2` 输入/校验错误、`3` 审计 fail 或 `diff --fail-on removed` 命中、`4` 内部错误。所有命令输出统一使用 `webvault:` 前缀。
+退出码：`0` 成功（含审计 warn、完整链）、`2` 输入/校验错误、`3` 审计 fail / `diff --fail-on removed` 命中 / 链不完整、`4` 内部错误。所有命令输出统一使用 `webvault:` 前缀。
+
+### 链式回放（`replay-chain`）
+
+`replay-chain` 只读取**已建索引**中的 response，不发起网络请求，也不改写 WARC/CDX/输入归档：
+
+- 每一跳用规范化 URL 查 SQLite response 行，再用 `warc_file` + 物理 `offset` 从归档取出原始 response，原样写到 `chain/<六位 hop>/response.http`；
+- 只有 301/302/303/307/308 且原始响应头中恰好一个可解析 `Location` 时才继续；相对 `Location` 以当前响应 URL 为基址；
+- 必须从 WARC 响应头读 `Location`，并与 CDX `redirect` 列核对；二者不一致时该跳终止并保留冲突证据；
+- `exact_capture`：每跳 timestamp 必须与起始 redirect 相同，否则报 `E_EXACT_CAPTURE_MISSING` 并保留已取得的跳（“证据链不完整”）；
+- `as_of`：每跳取不晚于 `--at` 的最近 response，可跨时间闭合，manifest 用 `mixed_timestamps` / `distinct_timestamps` 标明混合时点；
+- 终止状态各自独立写入 manifest：`E_LOCATION_MISSING`、`E_LOCATION_MULTIPLE`、`E_LOCATION_INVALID`、`E_UNEXPECTED_LOCATION`、`E_NO_CDX_TARGET`、`E_CAPTURE_AFTER_AT`、`E_ARCHIVE_NOT_FOUND`、`E_ARCHIVE_UNREADABLE`、`E_NOT_RESPONSE`、`E_OFFSET_NOT_FOUND`、`E_BAD_HTTP_BLOCK`、`E_REDIRECT_LOOP`、`E_HOP_LIMIT`、`E_CDX_WARC_LOCATION_MISMATCH`、`E_TARGET_URI_MISMATCH`、`CHAIN_COMPLETE`；
+- 同 URL 同时间多行按 `(digest, warc_file, offset)` 稳定排序取首行，并在 `ambiguities` 中记录全部候选。
 
 ## 目录
 

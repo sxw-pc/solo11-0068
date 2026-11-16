@@ -18,6 +18,7 @@ from .commands import (
     cmd_index,
     cmd_manifest,
     cmd_replay,
+    cmd_replay_chain,
 )
 from .demo import run_demo
 
@@ -75,6 +76,24 @@ def _parser() -> VaultParser:
     replay.add_argument("--status", type=int, default=None)
     replay.add_argument("--limit", type=int, default=1000)
     replay.set_defaults(func=cmd_replay)
+
+    chain = sub.add_parser(
+        "replay-chain",
+        help="follow archived redirects offline and write a provenance manifest",
+    )
+    chain.add_argument("--db", required=True)
+    chain.add_argument("--url", "--start-url", dest="url", required=True, help="start URL")
+    chain.add_argument("--at", required=True, help="capture time point (ISO-8601)")
+    chain.add_argument(
+        "--mode",
+        required=True,
+        choices=["exact_capture", "as_of"],
+        help="exact_capture pins every hop to the start timestamp; as_of uses captures at or before --at",
+    )
+    chain.add_argument("--out", required=True)
+    chain.add_argument("--archives-root", default=None)
+    chain.add_argument("--max-hops", type=int, default=20)
+    chain.set_defaults(func=cmd_replay_chain)
 
     manifest = sub.add_parser("manifest", help="build a manifest; optionally merge a set")
     manifest.add_argument("--archives", required=True)

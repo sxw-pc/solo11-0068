@@ -24,7 +24,7 @@ from .manifest import (
     merge_archives,
     write_manifest,
 )
-from .replay import replay_one, replay_query
+from .replay import ReplayError, replay_chain, replay_one, replay_query
 from .warc import write_archive
 
 
@@ -187,6 +187,27 @@ def cmd_replay(args) -> int:
     item = replay_one(args.archive, args.offset, out_dir, filename=args.filename)
     log(f"wrote {item.output} ({item.bytes_written} bytes) from offset {args.offset}")
     return 0
+
+
+def cmd_replay_chain(args) -> int:
+    try:
+        manifest, manifest_path = replay_chain(
+            args.db,
+            args.archives_root,
+            args.url,
+            args.at,
+            args.mode,
+            Path(args.out),
+            max_hops=args.max_hops,
+        )
+    except ReplayError as exc:
+        fail(f"{exc.code}: {exc.detail}")
+        return 2
+    log(
+        f"chain {manifest['status']}: {len(manifest['hops'])} hop(s), "
+        f"termination {manifest['termination']['code']}; manifest: {manifest_path}"
+    )
+    return 0 if manifest["status"] == "complete" else 3
 
 
 def cmd_manifest(args) -> int:
